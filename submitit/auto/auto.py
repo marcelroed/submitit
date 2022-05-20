@@ -121,6 +121,7 @@ class AutoExecutor(Executor):
     def _typed_parameters(cls) -> tp.Dict[str, Type]:
         return {
             "name": str,
+            "executable": str,
             "timeout_min": int,
             "mem_gb": float,
             "nodes": int,
