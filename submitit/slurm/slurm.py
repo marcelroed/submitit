@@ -341,7 +341,7 @@ class SlurmExecutor(core.PicklingExecutor):
     @property
     def _submitit_command_str(self) -> str:
         return " ".join(
-            [shlex.quote(sys.executable), "-u -m submitit.core._submit", shlex.quote(str(self.folder))]
+            ["-u -m submitit.core._submit", shlex.quote(str(self.folder))]
         )
 
     def _make_submission_file_text(self, command: str, uid: str) -> str:
@@ -386,6 +386,7 @@ def _get_default_parameters() -> Dict[str, Any]:
 def _make_sbatch_string(
     command: str,
     folder: tp.Union[str, Path],
+    executable: tp.Optional[Path] = None,
     job_name: str = "submitit",
     partition: tp.Optional[str] = None,
     time: int = 5,
@@ -426,6 +427,8 @@ def _make_sbatch_string(
 
     folder: str/Path
         folder where print logs and error logs will be written
+    executable: str/Path/None
+        executable to use to execute the python command. If None, uses the currently executable
     signal_delay_s: int
         delay between the kill signal and the actual kill of the slurm job.
     setup: list
@@ -448,6 +451,7 @@ def _make_sbatch_string(
     nonslurm = [
         "nonslurm",
         "folder",
+        "executable",
         "command",
         "map_count",
         "array_parallelism",
@@ -460,6 +464,8 @@ def _make_sbatch_string(
     parameters = {k: v for k, v in locals().items() if v is not None and k not in nonslurm}
     # rename and reformat parameters
     parameters["signal"] = f"USR1@{signal_delay_s}"
+    if executable is None:
+        executable = shlex.quote(sys.executable)
     if num_gpus is not None:
         warnings.warn(
             '"num_gpus" is deprecated, please use "gpus_per_node" instead (overwritting with num_gpus)'
@@ -502,7 +508,7 @@ def _make_sbatch_string(
         "# command",
         "export SUBMITIT_EXECUTOR=slurm",
         # The input "command" is supposed to be a valid shell command
-        " ".join((srun_cmd, command)),
+        " ".join((srun_cmd, executable, command)),
         "",
     ]
     return "\n".join(lines)
